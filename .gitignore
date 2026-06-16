@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Datasets (see data/README.md)
+data/*
+!data/README.md
+!data/.gitkeep
+
+# Large caches & model weights — rebuilt or fetched via Zenodo / torch.hub
+cache/*
+!cache/.gitkeep
+rba_score_maps/*
+!rba_score_maps/.gitkeep
+*.pth
+*.pt
+*.ckpt
+*.npz
+
+# Results are reproduced by run_all.py
+results/*
+!results/.gitkeep
+
+# Logs / temp
+*.log
+*_tmp*
+*.zip

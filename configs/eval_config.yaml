@@ -1,0 +1,61 @@
+# eval_config.yaml — Updated with segmentation-based ROI
+seed: 42
+device: cuda
+
+data:
+  cityscapes_root: data/id
+  laf_root: data/ood
+  split: val
+  img_size: [512, 1024]   # None = Originalgröße (langsamer)
+  max_images: -1           # -1 = alle
+
+scores:
+  - msp
+  - entropy
+  - energy
+
+output_dir: results/baseline
+
+# ---------------------------------------------------------------
+# ROI (Region of Interest) — Fahrkorridor-Evaluierung
+# ---------------------------------------------------------------
+# Evaluiert Unsicherheitsmetriken nur innerhalb des erkannten
+# Fahrkorridors, statt über das gesamte Bild.
+#
+# Modi:
+#   segmentation — nutzt die Segmentierung des Modells selbst,
+#                  um die Straße pro Bild dynamisch zu erkennen.
+#                  Genaueste Methode, passt sich jeder Szene an.
+#   trapezoid    — festes Trapez-Layout (Fallback).
+#
+# Klassen (nur für mode: segmentation):
+#   [0]       — nur "road" (empfohlen, am strengsten)
+#   [0, 1]    — road + sidewalk
+#   [0, 1, 9] — road + sidewalk + terrain
+# ---------------------------------------------------------------
+roi:
+  enabled: true
+  mode: segmentation       # 'segmentation' oder 'trapezoid'
+  classes: [0]             # Cityscapes trainIds (0=road, 1=sidewalk)
+
+  # Fallback für mode: trapezoid
+  preset: default
+  # Für preset: custom — eigene Trapez-Koordinaten:
+  # top_left_x: 0.38
+  # top_right_x: 0.62
+  # top_y: 0.28
+  # bottom_left_x: 0.05
+  # bottom_right_x: 0.95
+  # bottom_y: 0.90
+
+# ---------------------------------------------------------------
+# DINOv2 kNN — Zero-Shot OoD Detection (Chapter 2.4)
+# ---------------------------------------------------------------
+# Runs DINOv2 kNN evaluation using the SAME ROI masks from the
+# SegFormer segmentation above. This gives a fair comparison:
+# all scores evaluated on the exact same pixel sets.
+# ---------------------------------------------------------------
+dinov2:
+  enabled: true
+  gallery_path: cache/dinov2_gallery.pt    # Cached gallery features
+  gallery_max_images: 500            # Cityscapes train images for gallery

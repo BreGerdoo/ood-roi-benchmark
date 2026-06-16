@@ -1,0 +1,26 @@
+# OoD Segmentation Benchmark
+# Install: pip install -r requirements.txt
+
+# Core — pinned versions
+torch==2.2.2
+torchvision==0.17.2
+
+# Model (Cityscapes pretrained SegFormer)
+transformers>=4.35.0,<5
+
+# Data / numerics
+numpy<2
+Pillow
+scipy
+
+# Evaluation
+scikit-learn
+
+# Experiment management
+pandas
+matplotlib
+tqdm
+pyyaml
+
+# Visualization (make_roi_figure.py)
+opencv-python
