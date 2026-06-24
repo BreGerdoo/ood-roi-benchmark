@@ -64,3 +64,30 @@ ROI_CLOSING_DIR    = RESULTS_DIR / "roi_closing"
 ROI_CLOSING_SW_DIR = RESULTS_DIR / "roi_closing_sw"
 SMIYC_RESULTS_DIR  = RESULTS_DIR / "smiyc"
 FIGURES_DIR        = RESULTS_DIR / "figures"
+
+
+# ---------------------------------------------------------------------------
+# LostAndFound test-NoKnown (Chan et al., 2021)
+# ---------------------------------------------------------------------------
+# Bild-Praefixe, deren OoD-Objekt zu einer BEKANNTEN Cityscapes-Klasse gehoert
+# (Kinder, Fahrraeder) und die daher per OoD-Definition KEINE OoD sind.
+# Exakt uebernommen aus road_anomaly_benchmark/datasets/tracks.py
+# (Split 'LostAndFound-testNoKnown', Feld exclude_prefix).
+LAF_NOKNOWN_EXCLUDE_PREFIXES = (
+    "15_Rechbergstr_Deckenpfronn",   # Kinder
+    "01_Hanns_Klemm_Str_45_000006",  # Fahrrad (velo)
+    "01_Hanns_Klemm_Str_45_000007",  # Fahrrad
+    "10_Schlossberg_9_000004",       # Fahrrad
+)
+
+
+def filter_noknown(npz_files):
+    """Entfernt L&F-Score-Map-Dateien mit bekannten Klassen (Kinder/Fahrraeder).
+
+    Wirkt auf eine Liste von Path-Objekten (Score-Map-.npz). Der Dateiname
+    entspricht dem Bild-Stem, daher koennen wir per Praefix filtern. Gibt
+    (gefilterte_liste, anzahl_entfernt) zurueck.
+    """
+    kept = [f for f in npz_files
+            if not f.stem.startswith(LAF_NOKNOWN_EXCLUDE_PREFIXES)]
+    return kept, len(npz_files) - len(kept)

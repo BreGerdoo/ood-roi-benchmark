@@ -32,7 +32,7 @@ from tqdm import tqdm
 
 SRC_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SRC_DIR))
-from paths import RESULTS_DIR, SCORE_MAPS_LAF
+from paths import RESULTS_DIR, SCORE_MAPS_LAF, filter_noknown
 
 OUTPUT_DIR    = RESULTS_DIR / "roi_adaptive_hull"
 SCORE_MAP_DIR = SCORE_MAPS_LAF
@@ -142,6 +142,10 @@ def main():
               "PixOOD": "pixood_map", "RbA": "rba_map"}
 
     npz_files = sorted(SCORE_MAP_DIR.glob("*.npz"))
+    npz_files, _n_noknown = filter_noknown(npz_files)
+    if _n_noknown:
+        print(f"[NoKnown] {_n_noknown} Bilder mit bekannten Klassen "
+              f"(Kinder/Fahrraeder) aus der Auswertung entfernt.")
     if not npz_files:
         print(f"[Error] Keine Score-Maps in {SCORE_MAP_DIR}. Erst compute_score_maps.py "
               f"+ merge_rba_into_score_maps.py ausfuehren (oder Caches per "

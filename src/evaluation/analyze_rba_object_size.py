@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 
 SRC_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SRC_DIR))
-from paths import RESULTS_DIR, SCORE_MAPS_LAF, SMIYC_RESULTS_DIR
+from paths import RESULTS_DIR, SCORE_MAPS_LAF, SMIYC_RESULTS_DIR, filter_noknown
 
 OUTPUT_DIR = RESULTS_DIR / "rba_analysis"
 
@@ -45,6 +45,10 @@ DATASETS = {
 def per_image_stats(npz_dir, dataset_name):
     rows = []
     files = sorted(npz_dir.glob("*.npz"))
+    if "Found" in dataset_name:           # NoKnown-Filter nur fuer Lost & Found
+        files, n_nk = filter_noknown(files)
+        if n_nk:
+            print(f"[NoKnown] {n_nk} Bilder mit bekannten Klassen entfernt ({dataset_name}).")
     if not files:
         print(f"[Warn] Keine Score-Maps in {npz_dir} -- {dataset_name} uebersprungen.")
         return rows

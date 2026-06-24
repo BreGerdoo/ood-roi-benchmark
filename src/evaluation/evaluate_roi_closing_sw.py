@@ -22,7 +22,7 @@ SRC_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SRC_DIR))
 
 from dataloaders.laf_datasets import LostAndFoundOoDDataset
-from paths import DATA_LAF, SCORE_MAPS_LAF, ROI_CLOSING_SW_DIR, FIGURES_DIR
+from paths import DATA_LAF, SCORE_MAPS_LAF, ROI_CLOSING_SW_DIR, FIGURES_DIR, filter_noknown
 
 LAF_ROOT      = str(DATA_LAF)
 SCORE_MAP_DIR = SCORE_MAPS_LAF
@@ -178,6 +178,10 @@ def main():
         sys.exit(1)
 
     npz_files = sorted(SCORE_MAP_DIR.glob("*.npz"))
+    npz_files, _n_noknown = filter_noknown(npz_files)
+    if _n_noknown:
+        print(f"[NoKnown] {_n_noknown} Bilder mit bekannten Klassen "
+              f"(Kinder/Fahrraeder) aus der Auswertung entfernt.")
     n = len(npz_files) if args.max_images < 0 else min(args.max_images, len(npz_files))
     print(f"[Score-Maps] {n} Dateien")
 

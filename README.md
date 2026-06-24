@@ -25,8 +25,17 @@ evaluated under four ROI variants:
 | **C** | Road ROI from the model's own segmentation (trainId 0, optionally +sidewalk) |
 | **D** | Negative filtering (exclude high-confidence InD regions, MSP > 0.95) |
 
-on three datasets: **Lost & Found** (test split, 1 096 images), **SMIYC RoadAnomaly21**
-(validation, 10 images) and **SMIYC RoadObstacle21** (validation, 30 images).
+on three datasets: **Lost & Found** (test split, **976 images** after filtering — see note
+below), **SMIYC RoadAnomaly21** (validation, 10 images) and **SMIYC RoadObstacle21**
+(validation, 30 images).
+
+> **Note on Lost & Found filtering:** Lost & Found annotates a small number of *known*
+> classes (children, bicycles) as hazards. Because these are in-distribution for a
+> Cityscapes-trained model and contradict the OoD definition used here, they are excluded
+> via the official prefix list of `road-anomaly-benchmark` (143 images removed). After
+> additionally keeping only images with ≥ 100 OoD pixels, **976 images** remain (class
+> imbalance ≈ 1:772). The filter is applied automatically in the dataloader; no score-map
+> recomputation is needed.
 
 ---
 
@@ -45,7 +54,8 @@ ood-roi-benchmark/
 │   ├── dataloaders/           Lost & Found / Cityscapes / SMIYC dataset classes
 │   ├── models/                SegFormer-B2 loading + forward helpers
 │   ├── scoring/               score-map computation & RbA merging (expensive, cached)
-│   ├── evaluation/            metric computation: ROI variants, ablations, baseline
+│   ├── evaluation/            metric computation: ROI variants, ablations, baseline,
+│   │                          RbA root-cause analysis
 │   └── visualization/         all thesis figures
 ├── data/                      datasets (NOT in git) — see data/README.md
 ├── cache/                     dinov2_gallery.pt (built once, NOT in git)
@@ -142,7 +152,7 @@ python run_all.py
 
 > ⚠️ **Runtime warning:** Without the precomputed caches the full pipeline takes
 > **several hours up to a full day** depending on your GPU — the score maps for the
-> 1 096 Lost & Found images alone are ~2–3 h, the DINOv2 gallery + kNN evaluation ~3 h,
+> 976 Lost & Found images alone are ~2–3 h, the DINOv2 gallery + kNN evaluation ~3 h,
 > the Chapter-2 baseline ~0.5–1 h. `run_all.py` warns before starting expensive stages.
 
 Useful flags:
@@ -180,6 +190,18 @@ All scripts can be called from the repo root. Paths below are relative to the ro
 | `evaluate_roi_closing_sw.py` | dito | `results/roi_closing_sw/closing_sw_results.{csv,tex}` (Table 7) |
 | `evaluate_smiyc_variants.py` | SMIYC caches (both tracks) | `results/smiyc/<Track>/smiyc_results.{csv,tex}`, `per_image_auroc.csv` |
 | `measure_segformer_iou.py` | `data/id` (val) | console + `results/segformer_iou.csv` (Table 8) |
+| `analyze_rba_roi_cause.py` | L&F + RO21 score-map caches | `results/rba_analysis/`: size-controlled A-vs-C comparison + object-fragmentation test for the RbA road-ROI degradation (CSVs + PNGs). Rejects object size and fragmentation as the cause |
+| `analyze_rba_size_matched_heatmaps.py` `[--windows lo-hi … --width N --n-heatmaps N]` | `results/rba_analysis/per_image_*.csv` (from the script above) + score-map caches | narrow size-matched A-vs-C comparison (L&F vs RO21, ≤ 200 px windows) + RbA heatmaps restricted to the road-ROI in `results/rba_analysis/heatmaps_roadroi/` |
+| `analyze_rba_hood_hypothesis.py` `[--hood 0.90 --fp-thresh F]` | L&F score-map cache | `results/rba_analysis/hood_hypothesis_laf.csv` + console: verifies the ego-vehicle-hood cause of the RbA road-ROI collapse (hood-in-ROI %, hood false-positive score, and a causal counter-test that removes the hood zone) |
+
+> **RbA root-cause analysis (`analyze_rba_*`):** these three scripts investigate *why* RbA
+> degrades under the road-ROI on Lost & Found but stays stable on RoadObstacle21. They run
+> on the cached `.npz` score maps only (no GPU, no re-inference). Run `analyze_rba_roi_cause.py`
+> first — it writes the per-image CSVs (`per_image_laf.csv`, `per_image_ro21.csv`) that the
+> size-matched script reuses. Conclusion of the analysis: neither object size nor object
+> fragmentation explains the drop; the cause is the ego-vehicle hood, which SegFormer-B2
+> labels as "road" so it enters the road-ROI, where RbA fires false positives
+> (`analyze_rba_hood_hypothesis.py` confirms this with a causal counter-test).
 
 ### 5.3 Figures (`src/visualization/`)
 
@@ -205,6 +227,9 @@ results/
 ├── roi_closing/               Table 7 (road ROI)
 ├── roi_closing_sw/            Table 7 (road+sidewalk)
 ├── smiyc/<Track>/             SMIYC tables + score_maps/ + heatmaps/
+├── rba_analysis/              RbA root-cause analysis: size-controlled & fragmentation
+│                              tests, size-matched heatmaps (heatmaps_roadroi/),
+│                              hood-hypothesis CSV, per-image CSVs
 ├── figures/                   chapter2/, single_image/ (+ single_image_metrics.csv),
 │                              roi_variants/, roi_closing*/, roi_schematic/
 └── segformer_iou.csv          Table 8

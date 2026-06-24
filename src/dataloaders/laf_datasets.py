@@ -35,6 +35,19 @@ CITYSCAPES_IGNORE_IDS = set(range(0, 7)) | {255}
 # '30'=31, '32'=33, '33'=34, '35'=36, '36'=37, '37'=38, '38'=39
 LAF_NON_HAZARD_IDS = {31, 33, 34, 36, 37, 38, 39}
 
+# LostAndFound test-NoKnown (Chan et al., 2021, SegmentMeIfYouCan):
+# Bild-Praefixe, deren OoD-Objekt zu einer BEKANNTEN Cityscapes-Klasse gehoert
+# (Kinder, Fahrraeder) und die daher per OoD-Definition KEINE OoD sind.
+# Exakt uebernommen aus road_anomaly_benchmark/datasets/tracks.py (Split
+# 'LostAndFound-testNoKnown', Feld exclude_prefix). Bilder, deren Dateiname
+# mit einem dieser Praefixe beginnt, werden ausgeschlossen.
+LAF_NOKNOWN_EXCLUDE_PREFIXES = (
+    "15_Rechbergstr_Deckenpfronn",   # Kinder
+    "01_Hanns_Klemm_Str_45_000006",  # Fahrrad (velo)
+    "01_Hanns_Klemm_Str_45_000007",  # Fahrrad
+    "10_Schlossberg_9_000004",       # Fahrrad
+)
+
 # ImageNet normalisation (used by all torchvision / HuggingFace pretrained models)
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD  = [0.229, 0.224, 0.225]
@@ -133,6 +146,7 @@ class LostAndFoundOoDDataset(Dataset):
         split: str = "test",
         size: tuple | None = None,
         min_ood_pixels: int = 100,
+        no_known: bool = True,
     ):
         self.size = size
         root  = Path(root)
@@ -157,6 +171,21 @@ class LostAndFoundOoDDataset(Dataset):
 
         print(f"[LostAndFound] Found {len(self.samples)} images "
               f"(split='{split}', {missing} missing labels)")
+
+        # LostAndFound test-NoKnown: Bilder mit bekannten Klassen (Kinder,
+        # Fahrraeder) als "OoD" ausschliessen (Chan et al., 2021). Diese
+        # widersprechen der OoD-Definition, da person/rider/bicycle zu den
+        # Cityscapes-Trainingsklassen gehoeren.
+        if no_known:
+            before = len(self.samples)
+            self.samples = [
+                (img, lbl) for (img, lbl) in self.samples
+                if not Path(img).stem.startswith(LAF_NOKNOWN_EXCLUDE_PREFIXES)
+            ]
+            removed = before - len(self.samples)
+            if removed:
+                print(f"[LostAndFound] NoKnown: {removed} Bilder mit bekannten "
+                      f"Klassen (Kinder/Fahrraeder) entfernt -> {len(self.samples)}")
 
         if min_ood_pixels > 0:
             filtered = []
