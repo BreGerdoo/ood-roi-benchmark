@@ -55,7 +55,7 @@ ood-roi-benchmark/
 │   ├── models/                SegFormer-B2 loading + forward helpers
 │   ├── scoring/               score-map computation & RbA merging (expensive, cached)
 │   ├── evaluation/            metric computation: ROI variants, ablations, baseline,
-│   │                          RbA root-cause analysis
+│   │                          hood counter-test analysis
 │   └── visualization/         all thesis figures
 ├── data/                      datasets (NOT in git) — see data/README.md
 ├── cache/                     dinov2_gallery.pt (built once, NOT in git)
@@ -190,18 +190,16 @@ All scripts can be called from the repo root. Paths below are relative to the ro
 | `evaluate_roi_closing_sw.py` | dito | `results/roi_closing_sw/closing_sw_results.{csv,tex}` (Table 7) |
 | `evaluate_smiyc_variants.py` | SMIYC caches (both tracks) | `results/smiyc/<Track>/smiyc_results.{csv,tex}`, `per_image_auroc.csv` |
 | `measure_segformer_iou.py` | `data/id` (val) | console + `results/segformer_iou.csv` (Table 8) |
-| `analyze_rba_roi_cause.py` | L&F + RO21 score-map caches | `results/rba_analysis/`: size-controlled A-vs-C comparison + object-fragmentation test for the RbA road-ROI degradation (CSVs + PNGs). Rejects object size and fragmentation as the cause |
-| `analyze_rba_size_matched_heatmaps.py` `[--windows lo-hi … --width N --n-heatmaps N]` | `results/rba_analysis/per_image_*.csv` (from the script above) + score-map caches | narrow size-matched A-vs-C comparison (L&F vs RO21, ≤ 200 px windows) + RbA heatmaps restricted to the road-ROI in `results/rba_analysis/heatmaps_roadroi/` |
-| `analyze_rba_hood_hypothesis.py` `[--hood 0.90 --fp-thresh F]` | L&F score-map cache | `results/rba_analysis/hood_hypothesis_laf.csv` + console: verifies the ego-vehicle-hood cause of the RbA road-ROI collapse (hood-in-ROI %, hood false-positive score, and a causal counter-test that removes the hood zone) |
+| `analyze_hood_hypothesis.py` `[--methods rba pixood --hood 0.90 --no-heatmap --heatmap-img <stem>]` | L&F score-map cache | `results/rba_analysis/hood_hypothesis_{rba,pixood}_laf.csv` + `results/figures/chapter5/hood_{rba,pixood}_heatmap.png` + console: verifies the ego-vehicle-hood cause of the RbA **and** PixOOD road-ROI collapse via a causal counter-test (removing the bottom image tenth from the road-ROI) and renders the example heatmap used in the thesis |
 
-> **RbA root-cause analysis (`analyze_rba_*`):** these three scripts investigate *why* RbA
-> degrades under the road-ROI on Lost & Found but stays stable on RoadObstacle21. They run
-> on the cached `.npz` score maps only (no GPU, no re-inference). Run `analyze_rba_roi_cause.py`
-> first — it writes the per-image CSVs (`per_image_laf.csv`, `per_image_ro21.csv`) that the
-> size-matched script reuses. Conclusion of the analysis: neither object size nor object
-> fragmentation explains the drop; the cause is the ego-vehicle hood, which SegFormer-B2
-> labels as "road" so it enters the road-ROI, where RbA fires false positives
-> (`analyze_rba_hood_hypothesis.py` confirms this with a causal counter-test).
+> **Hood analysis (`analyze_hood_hypothesis.py`):** investigates *why* RbA and PixOOD
+> degrade under the road-ROI on Lost & Found but not on RoadObstacle21. Runs on the cached
+> `.npz` score maps only (no GPU, no re-inference). For each method it reports how much of
+> the road-ROI's bottom tenth (the ego-vehicle hood) SegFormer-B2 labels as "road", the mean
+> score there vs. the rest of the road-ROI, and a causal counter-test: removing the hood zone
+> lifts the mean per-image AUROC back above the fixed-trapezoid value, accounting for
+> essentially the entire road-ROI drop while excising no OoD pixels. It also saves the
+> example heatmap (`figures/chapter5/hood_rba_heatmap.png`) shown in the thesis.
 
 ### 5.3 Figures (`src/visualization/`)
 
@@ -210,9 +208,10 @@ All scripts can be called from the repo root. Paths below are relative to the ro
 | Ch. 2 qualitative SegFormer figures | `python src/visualization/visualize.py --imgs 02_Hanns_Klemm_Str_44_000002_000180 02_Hanns_Klemm_Str_44_000006_000180` (omit `--imgs` for the first N images) | `results/figures/chapter2/<name>_leftImg8bit.png` |
 | Fig. 3 — DINOv2-kNN success case | `python src/visualization/single_image_analysis.py --img "02_Hanns_Klemm_Str_44_000006_000180"` | `results/figures/single_image/single_<name>.png` + appends a row to `single_image_metrics.csv` |
 | Fig. 4 — DINOv2-kNN failure case (chalk drawing) | `python src/visualization/single_image_analysis.py --img "04_Maurener_Weg_8_000004_000100"` | dito |
-| Fig. 5/6 — ROI-variant examples | `python src/visualization/visualize_roi_variants.py --img "<name>_leftImg8bit"` with `02_Hanns_Klemm_Str_44_000006_000180`, `04_Maurener_Weg_8_000004_000100`, `15_Rechbergstr_Deckenpfronn_000004_000210` | `results/figures/roi_variants/roi_variants_<name>.png` |
+| Fig. 5/6 — ROI-variant examples | `python src/visualization/visualize_roi_variants.py --img "<name>_leftImg8bit"` with `02_Hanns_Klemm_Str_44_000006_000180` (success case) and `04_Maurener_Weg_8_000009_000210` (Variant-C failure case, dog on road) | `results/figures/roi_variants/roi_variants_<name>.png` |
 | ROI schematic overview | `python src/visualization/make_roi_figure.py --image <img> --label <gt>` | `results/figures/roi_schematic/roi_variants.pdf` |
 | SMIYC heatmap grids (Ch. 4) | `python src/visualization/visualize_smiyc_heatmaps.py [--track <Track>] [--imgs …]` | `results/smiyc/<Track>/heatmaps/<stem>_roi.png` — images auto-selected per track: 2 best + 1 median + 2 worst by per-image AUROC |
+| Ch. 5 ego-hood heatmap | produced by `python src/evaluation/analyze_hood_hypothesis.py` (see §5.2) | `results/figures/chapter5/hood_{rba,pixood}_heatmap.png` |
 
 
 ---
@@ -227,9 +226,7 @@ results/
 ├── roi_closing/               Table 7 (road ROI)
 ├── roi_closing_sw/            Table 7 (road+sidewalk)
 ├── smiyc/<Track>/             SMIYC tables + score_maps/ + heatmaps/
-├── rba_analysis/              RbA root-cause analysis: size-controlled & fragmentation
-│                              tests, size-matched heatmaps (heatmaps_roadroi/),
-│                              hood-hypothesis CSV, per-image CSVs
+├── rba_analysis/              hood counter-test CSVs (hood_hypothesis_{rba,pixood}_laf.csv)
 ├── figures/                   chapter2/, single_image/ (+ single_image_metrics.csv),
 │                              roi_variants/, roi_closing*/, roi_schematic/
 └── segformer_iou.csv          Table 8

@@ -21,7 +21,7 @@ Aufruf (aus dem Repo-Root):
     python src/visualization/visualize_adaptive_hull.py --imgs \
         02_Hanns_Klemm_Str_44_000006_000180 \
         04_Maurener_Weg_8_000004_000100 \
-        15_Rechbergstr_Deckenpfronn_000004_000210
+        04_Maurener_Weg_8_000009_000210
 """
 
 import argparse

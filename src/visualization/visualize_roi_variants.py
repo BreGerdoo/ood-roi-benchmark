@@ -54,7 +54,8 @@ CS_CLASSES = [
 ]
 
 # Background trainIds for negative filtering (Variant D)
-BG_TRAIN_IDS = {2, 3, 4, 5, 8, 10}  # building, wall, fence, pole, vegetation, sky
+# Must match evaluate_roi_variants.py: building, wall, fence, vegetation, sky
+BG_TRAIN_IDS = {2, 3, 4, 8, 10}
 BG_NAMES = [CS_CLASSES[i] for i in sorted(BG_TRAIN_IDS)]
 
 # ---------------------------------------------------------------------------

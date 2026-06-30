@@ -14,7 +14,7 @@ All commands run from the repo root — scripts resolve their paths via src/path
 ⚠️  RUNTIME WARNING
     Without precomputed score-map caches the full pipeline takes SEVERAL HOURS
     up to a full day, depending on your GPU:
-      - DINOv2 gallery + L&F kNN evaluation   : ~3 h   (1 096 images)
+      - DINOv2 gallery + L&F kNN evaluation   : ~3 h   (976 images)
       - L&F score maps (Energy/kNN/MSP/PixOOD): ~2-3 h
       - Chapter-2 baseline                    : ~0.5-1 h
       - SMIYC score maps                      : ~10-20 min (40 images)
@@ -63,11 +63,12 @@ STAGES = [
       [PY, S("src", "scoring", "merge_rba_into_score_maps_smiyc.py")]]),
 
     ("laf_eval",
-     "ROI variants L&F (Tab. 5+6) + closing ablations (Tab. 7) + SegFormer IoU (Tab. 8)",
+     "ROI variants L&F (Tab. 5+6) + closing ablations (Tab. 7) + SegFormer IoU (Tab. 8) + hood analysis",
      [[PY, S("src", "evaluation", "evaluate_roi_variants.py")],
       [PY, S("src", "evaluation", "evaluate_roi_closing.py")],
       [PY, S("src", "evaluation", "evaluate_roi_closing_sw.py")],
-      [PY, S("src", "evaluation", "measure_segformer_iou.py")]]),
+      [PY, S("src", "evaluation", "measure_segformer_iou.py")],
+      [PY, S("src", "evaluation", "analyze_hood_hypothesis.py")]]),
 
     ("smiyc_eval",
      "ROI-variant evaluation on SMIYC (both tracks) → results/smiyc/<Track>/",
@@ -80,8 +81,8 @@ STAGES = [
       [PY, S("src", "visualization", "single_image_analysis.py"), "--img", "02_Hanns_Klemm_Str_44_000006_000180"],
       [PY, S("src", "visualization", "single_image_analysis.py"), "--img", "04_Maurener_Weg_8_000004_000100"],
       [PY, S("src", "visualization", "visualize_roi_variants.py"), "--img", "02_Hanns_Klemm_Str_44_000006_000180_leftImg8bit"],
-      [PY, S("src", "visualization", "visualize_roi_variants.py"), "--img", "04_Maurener_Weg_8_000004_000100_leftImg8bit"],
-      [PY, S("src", "visualization", "visualize_roi_variants.py"), "--img", "15_Rechbergstr_Deckenpfronn_000004_000210_leftImg8bit"],
+      [PY, S("src", "visualization", "visualize_roi_variants.py"), "--img", "04_Maurener_Weg_8_000009_000210_leftImg8bit"],
+      [PY, S("src", "visualization", "visualize_adaptive_hull.py"), "--imgs", "04_Maurener_Weg_8_000009_000210"],
       [PY, S("src", "visualization", "visualize_smiyc_heatmaps.py")]]),
 ]
 
